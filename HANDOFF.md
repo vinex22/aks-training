@@ -116,7 +116,9 @@ Do not infer from this list that any new deployment, third cluster, paid add-on,
 
 On 2026-09-13, the user explicitly requested committing and pushing all pending project work to `https://github.com/vinex22/aks-training.git`, branch `main`. This publication includes the scaling lab, all four demo image sources, presenter UI, tests, dependency lockfile, Kubernetes manifests, infrastructure inventory, and repository instructions. Generated dependencies, credentials, and machine-local kubeconfigs are excluded.
 
-Publication is in progress. Record the verified remote commit after pushing; a local commit alone is not confirmation of GitHub publication. No Azure configuration changes or fresh live-health checks are part of this Git publication step.
+Project work was committed and pushed on 2026-09-13 as `6ae5ed495d9fc089d43548e2aaab823a39e0db99` (`Add AKS scaling lab and deployed presenter demo`). After the push, `git ls-remote origin refs/heads/main` matched that local commit exactly. This handoff confirmation is a follow-up documentation commit. New clones can now retrieve the lab, application sources, and infrastructure records.
+
+Pre-publication checks passed: all ten application tests, handoff links, Git whitespace checks, and common credential-pattern checks across 32 candidate files. Generated dependencies and machine-local credentials were not committed. No Azure configuration changes or fresh live-health checks were performed during publication. Use `git status --short --branch` and remote history to check subsequent publication state rather than treating this record as a permanent statement about branch synchronization.
 
 ## Suggested Copilot Prompt
 
