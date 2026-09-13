@@ -71,6 +71,32 @@ kubectl --context aks-training-flat get nodes
 
 Requires Azure CLI authentication in the subscription above, `kubectl`, and `kubelogin`. The explicit conversion avoids device-login prompts. Adding credentials selects the last cluster as the current context; use explicit `--context` arguments for lab commands.
 
+## Container Registry
+
+Created and verified on 2026-09-13 for the scaling demo images:
+
+- Name: `akstraining555a1e03`.
+- Login server: `akstraining555a1e03.azurecr.io`.
+- Resource group / region: `aks-training` / `centralindia`.
+- SKU: Basic; provisioning state: `Succeeded`.
+- Admin account: disabled. Authentication uses Microsoft Entra ID; registry permissions use classic Azure RBAC.
+- Public network endpoint enabled; anonymous pull is not enabled. No private endpoint was created.
+- Published Linux AMD64 images: `scaling/web:1.0.0`, `scaling/load:1.0.0`, `scaling/worker:1.0.0`, and `scaling/presenter:1.0.0`. [Digests and build instructions](apps/scaling-demo/README.md#images) are recorded with the source.
+- Overlay kubelet managed identity `731bbde5-866d-4712-8195-9d45a033ead3` has registry-scoped `AcrPull`. Role assignment: `7aa5f362-6cb0-4e98-a89c-ea91a54f8d81`. Presenter, web, and load image pulls succeeded on AKS.
+
+## Scaling Presenter
+
+- Deployed on 2026-09-13 to `aks-training-overlay`, namespace `scaling-lab`.
+- Deployment / Service / ServiceAccount: `scaling-presenter`; one replica, ClusterIP Service port 80 to container port 8080.
+- Namespace Role/RoleBinding allows only the reviewed lab resource types; no cluster role, secret access, or pod exec permission is granted to the application.
+- Browser access: http://127.0.0.1:18080 through a localhost-only `kubectl port-forward`. No public ingress or LoadBalancer was created.
+- The current user object `fdf1faee-f73a-490f-a783-92587421b77c` was granted **Azure Kubernetes Service RBAC Cluster Admin** on the overlay cluster only, with explicit user approval after an initial Forbidden error. Role assignment: `778ac78e-a6dd-4588-a2ef-7ecb74e87b3e`. No subscription-wide role or flat-cluster assignment was added.
+- Both nodes were Ready during deployment. Presenter UI, read-only commands, web/HPA deployment, load generation, HPA scale-out to four and scale-in to two, and both PDB eviction cases were verified. KEDA remains disabled; no cluster add-ons were enabled.
+- Final lab state on 2026-09-13: one Ready presenter pod, two Ready web pods, HPA enabled, no load Job, and the test PDB removed. Redis and queue workers have not been deployed; their KEDA exercise remains pending.
+- Reconnect and operating instructions: [presenter guide](apps/scaling-demo/README.md).
+
 ## Cost
 
 The Free tier applies only to control plane pricing. Four node VMs in total, managed disks, load balancers, public IPs, and outbound traffic can incur charges. Stopping clusters reduces compute costs but does not eliminate charges for retained resources. Delete the training environment when it is no longer needed.
+
+The Basic container registry, image storage beyond included allowances, image transfers, and ACR Tasks build execution can also incur charges. Lab namespace cleanup does not remove the registry or its images.

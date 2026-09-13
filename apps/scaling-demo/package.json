@@ -1,0 +1,22 @@
+{
+  "name": "aks-scaling-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node web.mjs",
+    "test": "node --test test/*.test.mjs",
+    "load": "node load.mjs",
+    "worker": "node worker.mjs",
+    "presenter": "node presenter.mjs"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "0.11.0",
+    "@xterm/xterm": "6.0.0",
+    "lucide": "1.45.0",
+    "redis": "5.12.1"
+  }
+}

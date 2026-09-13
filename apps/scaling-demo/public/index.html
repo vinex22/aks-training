@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AKS Scaling Lab</title>
+  <link rel="stylesheet" href="/xterm.css">
+  <link rel="stylesheet" href="/style.css">
+  <script defer src="/xterm.js"></script>
+  <script defer src="/fit.js"></script>
+  <script defer src="/icons.js"></script>
+  <script defer src="/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><i data-lucide="blocks" aria-hidden="true"></i><div><span class="eyebrow">KUBERNETES / TRAINING</span><h1>AKS Scaling Lab</h1></div></div>
+    <div class="scope"><span class="scope-dot"></span><span>aks-training-overlay</span><code>scaling-lab</code></div>
+  </header>
+  <main>
+    <nav class="phases" aria-label="Lab phases" role="tablist">
+      <button role="tab" aria-selected="true" data-phase="HPA"><span>01</span> HPA</button>
+      <button role="tab" aria-selected="false" data-phase="PDB"><span>02</span> Disruption Budgets</button>
+      <button role="tab" aria-selected="false" data-phase="KEDA"><span>03</span> KEDA</button>
+      <button role="tab" aria-selected="false" data-phase="Diagnostics"><i data-lucide="activity" aria-hidden="true"></i> Diagnostics</button>
+    </nav>
+    <div class="workspace">
+      <aside aria-label="Commands"><div class="section-label">EXPERIMENT STEPS</div><div id="actions"></div><div class="boundary"><i data-lucide="shield-check" aria-hidden="true"></i><span>Namespace-scoped access<br>Localhost connection</span></div></aside>
+      <section class="experiment" aria-labelledby="action-title">
+        <div class="action-heading"><div><span class="eyebrow" id="phase-label">HPA</span><h2 id="action-title">Connecting...</h2></div><span id="mode" class="mode">READ ONLY</span></div>
+        <p id="description"></p>
+        <div class="expected"><i data-lucide="scan-eye" aria-hidden="true"></i><div><h3>Expected Observation</h3><p id="expected"></p></div></div>
+        <div class="command-heading"><h3>Command</h3><span id="command-count"></span></div>
+        <pre id="command-preview"></pre>
+        <div class="runbar"><label id="confirm-label" hidden><input type="checkbox" id="confirm"> Apply this change to scaling-lab</label><button id="run" class="primary" disabled><i data-lucide="play" aria-hidden="true"></i><span>Run Command</span></button></div>
+        <div class="terminal-panel">
+          <div class="terminal-toolbar"><div><i data-lucide="terminal" aria-hidden="true"></i><span>Live Terminal</span><span id="execution-status" role="status">Idle</span></div><div class="tools"><button id="stop" disabled title="Stop the running command" aria-label="Stop the running command"><i data-lucide="square" aria-hidden="true"></i></button><button id="clear" title="Clear terminal" aria-label="Clear terminal"><i data-lucide="eraser" aria-hidden="true"></i></button></div></div>
+          <div id="terminal"></div>
+        </div>
+      </section>
+    </div>
+    <footer><span>AKS TRAINING</span><span>HPA: replicas &nbsp; / &nbsp; PDB: evictions &nbsp; / &nbsp; KEDA: queue demand</span><span id="connection">Connecting</span></footer>
+  </main>
+</body>
+</html>

@@ -6,4 +6,4 @@
 - Never commit tokens, private keys, kubeconfigs, or login caches. Obtain credentials through the current machine's authenticated tools.
 - Preserve existing user changes. Keep infrastructure records and handoff status updated after verified changes, distinguishing planned work from completed work.
 - Show visible progress for scripts and multi-step operations. Prefer PowerShell examples consistent with the existing documentation.
-- This repository currently contains documentation only: there is no application build or automated test suite. Validate Markdown references and command syntax; report whether Azure checks were actually run.
+- This repository contains documentation, Kubernetes training manifests, and Node.js demo apps in `apps/scaling-demo`. Run `npm --prefix apps/scaling-demo test` for application changes; image builds and presenter access are documented in its README. Validate YAML schemas, embedded shell and PowerShell syntax, and Markdown references. Distinguish offline validation from live lab execution, and report whether Azure checks were actually run.

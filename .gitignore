@@ -1,0 +1,3 @@
+apps/scaling-demo/node_modules/
+apps/scaling-demo/test-results/
+*.kubeconfig

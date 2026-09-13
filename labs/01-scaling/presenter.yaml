@@ -1,0 +1,216 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: scaling-presenter
+  namespace: scaling-lab
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: scaling-presenter
+  namespace: scaling-lab
+rules:
+  - apiGroups: [""]
+    resources: [pods, pods/log, events, services]
+    verbs: [get, list, watch]
+  - apiGroups: [""]
+    resources: [pods/eviction]
+    verbs: [create]
+  - apiGroups: [apps]
+    resources: [deployments, replicasets]
+    verbs: [get, list, watch]
+  - apiGroups: [apps]
+    resources: [deployments]
+    resourceNames: [cpu-web, queue-worker, redis]
+    verbs: [patch, update, delete]
+  - apiGroups: [apps]
+    resources: [deployments]
+    verbs: [create]
+  - apiGroups: [apps]
+    resources: [deployments/scale]
+    resourceNames: [cpu-web, queue-worker]
+    verbs: [get, patch, update]
+  - apiGroups: [batch]
+    resources: [jobs]
+    verbs: [get, list, watch, create]
+  - apiGroups: [batch]
+    resources: [jobs]
+    resourceNames: [load-generator]
+    verbs: [patch, update, delete]
+  - apiGroups: [autoscaling]
+    resources: [horizontalpodautoscalers]
+    verbs: [get, list, watch, create]
+  - apiGroups: [autoscaling]
+    resources: [horizontalpodautoscalers]
+    resourceNames: [cpu-web]
+    verbs: [patch, update, delete]
+  - apiGroups: [policy]
+    resources: [poddisruptionbudgets]
+    verbs: [get, list, watch, create]
+  - apiGroups: [policy]
+    resources: [poddisruptionbudgets]
+    resourceNames: [cpu-web]
+    verbs: [patch, update, delete]
+  - apiGroups: [""]
+    resources: [services]
+    verbs: [create]
+  - apiGroups: [""]
+    resources: [services]
+    resourceNames: [cpu-web, redis]
+    verbs: [patch, update, delete]
+  - apiGroups: [networking.k8s.io]
+    resources: [networkpolicies]
+    verbs: [create]
+  - apiGroups: [networking.k8s.io]
+    resources: [networkpolicies]
+    resourceNames: [redis-ingress]
+    verbs: [get, patch, update]
+  - apiGroups: [keda.sh]
+    resources: [scaledobjects]
+    verbs: [get, list, watch, create]
+  - apiGroups: [keda.sh]
+    resources: [scaledobjects]
+    resourceNames: [queue-worker]
+    verbs: [patch, update, delete]
+  - apiGroups: [metrics.k8s.io]
+    resources: [pods]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: scaling-presenter
+  namespace: scaling-lab
+subjects:
+  - kind: ServiceAccount
+    name: scaling-presenter
+    namespace: scaling-lab
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: scaling-presenter
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: scaling-presenter-kubeconfig
+  namespace: scaling-lab
+data:
+  kubeconfig: |
+    apiVersion: v1
+    kind: Config
+    clusters:
+      - name: in-cluster
+        cluster:
+          server: https://kubernetes.default.svc
+          certificate-authority: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    users:
+      - name: presenter
+        user:
+          tokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    contexts:
+      - name: lab
+        context:
+          cluster: in-cluster
+          user: presenter
+          namespace: scaling-lab
+    current-context: lab
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scaling-presenter
+  namespace: scaling-lab
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: scaling-presenter
+  template:
+    metadata:
+      labels:
+        app: scaling-presenter
+    spec:
+      serviceAccountName: scaling-presenter
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: presenter
+          image: akstraining555a1e03.azurecr.io/scaling/presenter:1.0.0
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: HOME
+              value: /tmp
+            - name: REDIS_URL
+              value: redis://redis:6379
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          volumeMounts:
+            - name: kubeconfig
+              mountPath: /etc/demo
+              readOnly: true
+            - name: temp
+              mountPath: /tmp
+      volumes:
+        - name: kubeconfig
+          configMap:
+            name: scaling-presenter-kubeconfig
+        - name: temp
+          emptyDir:
+            sizeLimit: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: scaling-presenter
+  namespace: scaling-lab
+spec:
+  type: ClusterIP
+  selector:
+    app: scaling-presenter
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: presenter-local-access
+  namespace: scaling-lab
+spec:
+  podSelector:
+    matchLabels:
+      app: scaling-presenter
+  policyTypes: [Ingress]
+  ingress: []
