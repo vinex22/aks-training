@@ -1,0 +1,26 @@
+AGFC and Azure future direction
+Scaling
+
+HPA / PDB/ KEDA
+AKS Enterprise Architecture & Networking
+
+Azure CNI (Overlay vs Standard)
+Enterprise-scale AKS architecture patterns
+Troubleshooting (S1/S2 Production issue)
+
+Structured troubleshooting methodology
+Common AKS production issues
+Debugging tools and techniques
+Logs and diagnostics interpretation 
+Log&Metric monitoring:
+
+AKS Monitoring Architecture (AMA vs OMS)
+Extension model (aks-managed-azure-monitor-logs) & lifecycle
+Impact of extension on AKS operations (resource lock, upgrade conflict)
+Troubleshooting AMA (extension state, agent pod, data ingestion)
+Best practices for production monitoring (DCR, workspace, cost)
+Cost optimization: logs vs metrics usage, DCR filtering, and optional disabling/reducing unnecessary data collection
+Manual and automated upgrading extensions
+ Service Mesh
+
+Istio or Azure future direction
