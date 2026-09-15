@@ -1,0 +1,54 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: hpa-load
+  namespace: hpa-flat
+spec:
+  activeDeadlineSeconds: 330
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        app: hpa-load
+    spec:
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      containers:
+        - name: load
+          image: busybox:1.37.0
+          command: [/bin/sh, -c]
+          args:
+            - |
+              echo "Starting five-minute load against http://php-apache/"
+              finish=$(( $(date +%s) + 300 ))
+              succeeded=0
+              failed=0
+              while [ "$(date +%s)" -lt "$finish" ]; do
+                if wget -q -T 5 -O /dev/null http://php-apache/; then
+                  succeeded=$((succeeded + 1))
+                else
+                  failed=$((failed + 1))
+                fi
+                total=$((succeeded + failed))
+                if [ "$((total % 25))" -eq 0 ]; then
+                  echo "Requests: succeeded=$succeeded failed=$failed"
+                fi
+                sleep 0.01
+              done
+              echo "Load complete: succeeded=$succeeded failed=$failed"
+              [ "$succeeded" -gt 0 ]
+          resources:
+            requests:
+              cpu: 25m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 32Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]

@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qos-guaranteed-unschedulable
+  namespace: qos-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qos-guaranteed-unschedulable
+  template:
+    metadata:
+      labels:
+        app: qos-guaranteed-unschedulable
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: demo
+          image: busybox:1.37.0
+          command: [sleep, "86400"]
+          resources:
+            requests:
+              cpu: "16"
+              memory: 64Gi
+            limits:
+              cpu: "16"
+              memory: 64Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]

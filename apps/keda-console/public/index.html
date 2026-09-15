@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+  <title>KEDA Lab | Queue Console</title>
+  <link rel="stylesheet" href="/style.css">
+  <script defer src="/icons.js"></script>
+  <script defer src="/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><i data-lucide="layers" aria-hidden="true"></i><span>KEDA LAB<span class="brand-sub">QUEUE CONSOLE</span></span></div>
+    <div class="cluster-path"><i data-lucide="network" aria-hidden="true"></i><span id="cluster-context">aks-training-flat</span><span class="divider" aria-hidden="true">/</span><span id="cluster-namespace">keda-lab</span></div>
+    <div class="connection" role="status"><span id="connection-dot" class="dot" aria-hidden="true"></span><span id="connection-label">Connecting</span></div>
+  </header>
+  <main>
+    <div class="page-title">
+      <div><p class="eyebrow">AZURE STORAGE QUEUE</p><h1>Queue scaling</h1></div>
+      <div class="observation"><time id="updated">Awaiting status</time><button id="refresh" type="button" class="icon-button" title="Refresh queue and cluster status" aria-label="Refresh queue and cluster status"><i data-lucide="refresh-cw" aria-hidden="true"></i></button></div>
+    </div>
+    <noscript><p class="notice notice-error">JavaScript is required. Queue controls are unavailable.</p></noscript>
+    <p id="connection-error" class="notice notice-error" role="alert" hidden></p>
+    <p id="queue-error" class="notice notice-error" role="alert" hidden></p>
+    <div id="consumer-warning" class="notice notice-warning" role="status" hidden>
+      <i data-lucide="triangle-alert" aria-hidden="true"></i>
+      <div><strong>Processor / KEDA not deployed</strong><p id="consumer-warning-detail">No processors available to consume messages.</p><p id="consumer-reason" hidden></p></div>
+    </div>
+    <section class="metrics" aria-label="Queue and processor observations">
+      <div class="metric primary"><span class="metric-label">QUEUE DEPTH</span><strong id="queue-depth">--</strong><span class="metric-note" id="queue-note">Approximate messages</span></div>
+      <div class="metric confirmed"><span class="metric-label">CONFIRMED SENT</span><strong id="confirmed-sent">--</strong><span class="metric-note" id="confirmed-note">No batch observed</span></div>
+      <div class="metric"><span class="metric-label">READY PROCESSORS</span><strong id="ready-processors">--</strong><span class="metric-note" id="processor-note">Awaiting cluster status</span></div>
+      <div class="metric"><span class="metric-label">HPA DESIRED</span><strong id="desired-replicas">--</strong><span class="metric-note" id="replica-note">Awaiting HPA status</span></div>
+    </section>
+    <div class="workspace">
+      <aside class="enqueue-panel" aria-labelledby="enqueue-title">
+        <div class="section-title"><h2 id="enqueue-title">Message control</h2><span id="queue-state" class="badge">Waiting</span></div>
+        <div class="destination"><i data-lucide="database" aria-hidden="true"></i><dl><div><dt>Storage account</dt><dd id="queue-account">--</dd></div><div><dt>Queue</dt><dd id="queue-name">--</dd></div></dl></div>
+        <form id="enqueue-form">
+          <div class="field-heading"><label for="message-count">Messages</label><span id="count-range" class="small-label">1-500 per batch</span></div>
+          <input id="message-count" name="count" type="number" min="1" max="500" step="1" value="50" inputmode="numeric" required aria-describedby="count-range count-error" disabled>
+          <fieldset class="presets" id="count-presets" disabled>
+            <legend class="sr-only">Message count presets</legend>
+            <div><input type="radio" name="preset" id="preset-10" value="10"><label for="preset-10">10</label></div>
+            <div><input type="radio" name="preset" id="preset-50" value="50" checked><label for="preset-50">50</label></div>
+            <div><input type="radio" name="preset" id="preset-100" value="100"><label for="preset-100">100</label></div>
+            <div><input type="radio" name="preset" id="preset-250" value="250"><label for="preset-250">250</label></div>
+          </fieldset>
+          <p id="count-error" class="field-error" role="alert" hidden></p>
+          <div class="actions">
+            <button id="enqueue" type="submit" class="primary-button" disabled><i data-lucide="send" aria-hidden="true"></i><span>Enqueue messages</span></button>
+            <button id="cancel" type="button" disabled><i data-lucide="square" aria-hidden="true"></i><span>Cancel sending</span></button>
+          </div>
+          <p id="control-state" class="control-state" role="status">Waiting for queue connection</p>
+        </form>
+        <p id="action-feedback" class="feedback" role="status" aria-atomic="true" hidden></p>
+        <section class="batch-detail" aria-labelledby="batch-title">
+          <div class="section-title"><h2 id="batch-title">Latest batch</h2><span id="batch-state" class="badge">Waiting</span></div>
+          <p id="batch-summary" class="batch-summary">No batch observed</p>
+          <progress id="batch-progress" max="1" value="0" aria-label="Confirmed messages sent" hidden></progress>
+          <dl class="batch-facts">
+            <div><dt>Batch ID</dt><dd id="batch-id">--</dd></div>
+            <div><dt>Failed</dt><dd id="batch-failed">--</dd></div>
+            <div><dt>Started</dt><dd><time id="batch-started">--</time></dd></div>
+            <div><dt>Finished</dt><dd><time id="batch-finished">--</time></dd></div>
+          </dl>
+          <p id="batch-error" class="field-error" role="alert" hidden></p>
+        </section>
+      </aside>
+      <div class="live-panel">
+        <section aria-labelledby="history-title">
+          <div class="section-title"><h2 id="history-title">Queue history</h2><span class="small-label">LAST 5 MINUTES</span></div>
+          <div class="chart"><canvas id="queue-history" role="img" aria-label="Queue history: no observations yet" aria-describedby="chart-summary">Queue history is unavailable.</canvas><p id="chart-empty">Waiting for queue observations</p></div>
+          <div class="chart-legend"><span><b aria-hidden="true"></b><span id="chart-caption">Approximate messages</span></span><span id="sample-count">0 observations</span></div>
+          <p id="chart-summary" class="sr-only">No queue observations yet.</p>
+        </section>
+        <section class="processor-section" aria-labelledby="processors-title">
+          <div class="section-title"><h2 id="processors-title">Processors</h2><span id="pod-count" class="small-label">AWAITING STATUS</span></div>
+          <dl class="scaler-details">
+            <div><dt>ScaledObject</dt><dd id="scaler-name">--</dd></div>
+            <div><dt>Ready</dt><dd><span id="scaler-ready" class="badge">--</span></dd></div>
+            <div><dt>Active</dt><dd><span id="scaler-active" class="badge">--</span></dd></div>
+            <div><dt>Replica range</dt><dd id="scaler-range">--</dd></div>
+          </dl>
+          <p id="pods-empty" class="empty">Waiting for processor status</p>
+          <table id="pods-table" class="pods-table" hidden>
+            <caption class="sr-only">Observed processor pods</caption>
+            <thead><tr><th scope="col">Pod</th><th scope="col">Readiness / phase</th><th scope="col">Node</th></tr></thead>
+            <tbody id="pods"></tbody>
+          </table>
+        </section>
+      </div>
+    </div>
+    <section class="batch-history" aria-labelledby="batches-title">
+      <div class="section-title"><h2 id="batches-title">Batch history</h2><span id="batch-count" class="small-label">AWAITING STATUS</span></div>
+      <p id="batches-empty" class="empty">Waiting for batch status</p>
+      <div id="batches-scroll" class="table-scroll" role="region" aria-label="Batch history table" tabindex="0" hidden>
+        <table class="history-table">
+          <caption class="sr-only">Batches reported by the server, newest first. Sent counts are confirmed sends.</caption>
+          <thead><tr><th scope="col">Started</th><th scope="col">Batch ID</th><th scope="col" class="numeric">Requested</th><th scope="col" class="numeric">Confirmed</th><th scope="col" class="numeric">Failed</th><th scope="col">Status</th></tr></thead>
+          <tbody id="batches"></tbody>
+        </table>
+      </div>
+    </section>
+    <footer><span><i data-lucide="database" aria-hidden="true"></i>Azure Storage Queue</span><span>Deduplication: last 100 request IDs / server memory</span><span id="footer-state">Awaiting observation</span></footer>
+  </main>
+</body>
+</html>

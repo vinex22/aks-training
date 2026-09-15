@@ -1,0 +1,185 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: keda-console
+  namespace: keda-lab
+  annotations:
+    azure.workload.identity/client-id: 12effe31-84d0-4dfe-85fe-0b3533d43b76
+    azure.workload.identity/tenant-id: 45b68ab1-2c84-414f-918d-e945e189121d
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: keda-console
+  namespace: keda-lab
+rules:
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [list]
+  - apiGroups: [apps]
+    resources: [deployments]
+    resourceNames: [azure-queue-processor]
+    verbs: [get]
+  - apiGroups: [keda.sh]
+    resources: [scaledobjects]
+    resourceNames: [azure-queue-scaler]
+    verbs: [get]
+  - apiGroups: [autoscaling]
+    resources: [horizontalpodautoscalers]
+    resourceNames: [azure-queue-processor-hpa]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: keda-console
+  namespace: keda-lab
+subjects:
+  - kind: ServiceAccount
+    name: keda-console
+    namespace: keda-lab
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: keda-console
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keda-console
+  namespace: keda-lab
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: keda-console
+  template:
+    metadata:
+      labels:
+        app: keda-console
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: keda-console
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: prepare-runtime
+          image: node:24.21.0-alpine3.24@sha256:be80f76cf40ec8e42b9bec49f60a55e0660f30af58d3e5a25530785b30ea67e2
+          command: [/bin/sh, -ec]
+          args:
+            - |
+              echo "Preparing locked Node console dependencies"
+              cp /source/* /app/
+              mkdir -p /app/public
+              cp /ui/* /app/public/
+              cd /app
+              npm ci --omit=dev --ignore-scripts --no-audit --no-fund --cache /tmp/npm-cache
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: source
+              mountPath: /source
+              readOnly: true
+            - name: ui
+              mountPath: /ui
+              readOnly: true
+            - name: app
+              mountPath: /app
+            - name: temp
+              mountPath: /tmp
+      containers:
+        - name: console
+          image: node:24.21.0-alpine3.24@sha256:be80f76cf40ec8e42b9bec49f60a55e0660f30af58d3e5a25530785b30ea67e2
+          command: [node, server.mjs]
+          workingDir: /app
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "8080"
+          ports:
+            - name: http
+              containerPort: 8080
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 192Mi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: app
+              mountPath: /app
+              readOnly: true
+      volumes:
+        - name: source
+          configMap:
+            name: keda-console-code
+        - name: ui
+          configMap:
+            name: keda-console-ui
+        - name: app
+          emptyDir:
+            sizeLimit: 256Mi
+        - name: temp
+          emptyDir:
+            sizeLimit: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keda-console
+  namespace: keda-lab
+spec:
+  type: ClusterIP
+  selector:
+    app: keda-console
+  ports:
+    - port: 80
+      targetPort: http
+      name: http
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: keda-console-local-access
+  namespace: keda-lab
+spec:
+  podSelector:
+    matchLabels:
+      app: keda-console
+  policyTypes: [Ingress]
+  ingress: []

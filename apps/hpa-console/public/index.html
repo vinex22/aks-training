@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>HPA Lab | Load Console</title>
+  <link rel="stylesheet" href="/style.css">
+  <script defer src="/icons.js"></script>
+  <script defer src="/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><i data-lucide="activity" aria-hidden="true"></i><span>HPA LAB<span class="brand-sub">LOAD CONSOLE</span></span></div>
+    <div class="cluster-path"><i data-lucide="network" aria-hidden="true"></i><span>aks-training-flat <span class="divider">/</span> hpa-flat</span></div>
+    <div class="connection"><span class="dot" id="connection-dot"></span><span id="connection-label" role="status">Connecting</span></div>
+  </header>
+  <main>
+    <div class="page-title">
+      <div><p class="eyebrow">WORKLOAD / PHP-APACHE</p><h1>Horizontal scaling</h1></div>
+      <div class="observation"><span id="updated">Waiting for cluster</span><button id="refresh" type="button" class="icon-button" title="Refresh cluster metrics" aria-label="Refresh cluster metrics"><i data-lucide="refresh-cw" aria-hidden="true"></i></button></div>
+    </div>
+    <div id="error" class="error" role="alert" hidden></div>
+    <section class="metrics" aria-label="Live HPA metrics">
+      <div class="metric primary"><span class="metric-label">READY PODS</span><strong id="ready">--</strong><span class="metric-note" id="replica-range">Waiting for replicas</span><i data-lucide="boxes" aria-hidden="true"></i></div>
+      <div class="metric"><span class="metric-label">DESIRED REPLICAS</span><strong id="desired">--</strong><span class="metric-note" id="decision">Waiting for HPA</span></div>
+      <div class="metric"><span class="metric-label">CPU UTILIZATION</span><strong id="cpu">--</strong><span class="metric-note" id="target">Target: --</span></div>
+      <div class="metric"><span class="metric-label">LOAD WORKERS</span><strong id="active-workers">0</strong><span class="metric-note" id="workload-state">No active load</span></div>
+    </section>
+    <div class="workspace">
+      <aside class="load-panel" aria-labelledby="load-title">
+        <div class="section-title"><h2 id="load-title">Traffic control</h2><span class="badge" id="phase">Idle</span></div>
+        <div class="destination"><i data-lucide="route" aria-hidden="true"></i><div><span class="small-label">TARGET SERVICE</span><strong>php-apache:80</strong></div></div>
+        <form id="load-form">
+          <label for="workers">Load workers <output for="workers" id="workers-value">2</output></label>
+          <input type="range" id="workers" min="1" max="8" step="1" value="2">
+          <div class="range-ends"><span>1 / Low</span><span>8 / High</span></div>
+          <label for="duration">Run duration</label>
+          <select id="duration"><option value="30">30 seconds</option><option value="60">1 minute</option><option value="120">2 minutes</option><option value="180" selected>3 minutes</option><option value="300">5 minutes</option></select>
+          <div class="actions"><button id="start" type="submit" class="start" disabled><i data-lucide="play" aria-hidden="true"></i>Start load</button><button id="stop" type="button" disabled><i data-lucide="square" aria-hidden="true"></i><span id="stop-label">Stop load</span></button></div>
+        </form>
+        <div class="countdown"><span class="small-label">TIME REMAINING</span><strong id="remaining">00:00</strong><span id="run-detail">No load Job</span></div>
+        <dl class="settings"><div><dt>CPU request / pod</dt><dd>200m</dd></div><div><dt>CPU limit / pod</dt><dd>500m</dd></div><div><dt>Scale-down window</dt><dd>60s</dd></div><div><dt>Autoscaler</dt><dd>HPA / CPU</dd></div></dl>
+      </aside>
+      <section class="live-panel" aria-labelledby="timeline-title">
+        <div class="section-title"><h2 id="timeline-title">Replica timeline</h2><span class="small-label">LAST 5 MINUTES</span></div>
+        <div class="chart"><canvas id="timeline" role="img" aria-label="Ready and desired replicas over time"></canvas><div id="chart-empty">Collecting live samples</div></div>
+        <div class="chart-legend"><span><b class="ready-key"></b>Ready pods</span><span><b class="desired-key"></b>HPA desired</span><span id="sample-count">0 samples</span></div>
+        <div class="section-title pods-title"><h2>Workload pods</h2><span id="pod-count" class="small-label">WAITING</span></div>
+        <div id="pods" class="pods" aria-label="Workload pod inventory"><p class="empty">Waiting for Kubernetes</p></div>
+      </section>
+    </div>
+    <section class="events-section" aria-labelledby="events-title">
+      <div class="section-title"><h2 id="events-title">Autoscaler events</h2><span class="small-label" id="event-count">KUBERNETES EVENTS</span></div>
+      <div id="events" class="events"><p class="empty">No events received</p></div>
+    </section>
+    <footer><span><i data-lucide="layers" aria-hidden="true"></i>Azure CNI / Flat network</span><span>Namespace: hpa-flat</span><span id="footer-state">Waiting for telemetry</span></footer>
+  </main>
+</body>
+</html>

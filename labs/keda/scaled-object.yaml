@@ -1,0 +1,29 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: azure-queue-scaler
+  namespace: keda-lab
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: azure-queue-processor
+  pollingInterval: 10
+  cooldownPeriod: 60
+  minReplicaCount: 0
+  maxReplicaCount: 6
+  advanced:
+    horizontalPodAutoscalerConfig:
+      name: azure-queue-processor-hpa
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 60
+  triggers:
+    - type: azure-queue
+      metadata:
+        accountName: stakskeda555a1e03
+        queueName: keda-demo
+        queueLength: "10"
+        activationQueueLength: "0"
+      authenticationRef:
+        name: azure-queue-auth

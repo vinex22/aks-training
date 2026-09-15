@@ -1,0 +1,155 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: hpa-console
+  namespace: hpa-flat
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: hpa-console
+  namespace: hpa-flat
+rules:
+  - apiGroups: [""]
+    resources: [pods, events]
+    verbs: [list]
+  - apiGroups: [autoscaling]
+    resources: [horizontalpodautoscalers]
+    resourceNames: [php-apache]
+    verbs: [get]
+  - apiGroups: [batch]
+    resources: [jobs]
+    resourceNames: [hpa-load]
+    verbs: [get, delete]
+  - apiGroups: [batch]
+    resources: [jobs]
+    verbs: [create]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: hpa-console
+  namespace: hpa-flat
+subjects:
+  - kind: ServiceAccount
+    name: hpa-console
+    namespace: hpa-flat
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: hpa-console
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hpa-console
+  namespace: hpa-flat
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: hpa-console
+  template:
+    metadata:
+      labels:
+        app: hpa-console
+    spec:
+      serviceAccountName: hpa-console
+      automountServiceAccountToken: true
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: console
+          image: node:24.21.0-alpine3.24@sha256:be80f76cf40ec8e42b9bec49f60a55e0660f30af58d3e5a25530785b30ea67e2
+          command: [node, --preserve-symlinks, --preserve-symlinks-main, server.mjs]
+          workingDir: /app
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "8080"
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: ICONS_FILE
+              value: /app/vendor/lucide.min.js
+          ports:
+            - name: http
+              containerPort: 8080
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          volumeMounts:
+            - name: code
+              mountPath: /app
+              readOnly: true
+            - name: ui
+              mountPath: /app/public
+              readOnly: true
+            - name: icons
+              mountPath: /app/vendor
+              readOnly: true
+      volumes:
+        - name: code
+          configMap:
+            name: hpa-console-code
+        - name: ui
+          configMap:
+            name: hpa-console-ui
+        - name: icons
+          configMap:
+            name: hpa-console-icons
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hpa-console
+  namespace: hpa-flat
+spec:
+  type: ClusterIP
+  selector:
+    app: hpa-console
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: hpa-console-local-access
+  namespace: hpa-flat
+spec:
+  podSelector:
+    matchLabels:
+      app: hpa-console
+  policyTypes: [Ingress]
+  ingress: []

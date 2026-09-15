@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qos-burstable
+  namespace: qos-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qos-burstable
+  template:
+    metadata:
+      labels:
+        app: qos-burstable
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: demo
+          image: busybox:1.37.0
+          command: [sleep, "86400"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 8Mi
+            limits:
+              cpu: 100m
+              memory: 32Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]

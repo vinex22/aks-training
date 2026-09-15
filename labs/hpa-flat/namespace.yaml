@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hpa-flat
+  labels:
+    app.kubernetes.io/part-of: aks-training
+    training.aks/cluster: flat

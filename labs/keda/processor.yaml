@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: azure-queue-processor
+  namespace: keda-lab
+spec:
+  selector:
+    matchLabels:
+      app: azure-queue-processor
+  template:
+    metadata:
+      labels:
+        app: azure-queue-processor
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: azure-queue-workload
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      nodeSelector:
+        kubernetes.io/os: linux
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: prepare-runtime
+          image: node:24.21.0-alpine3.24@sha256:be80f76cf40ec8e42b9bec49f60a55e0660f30af58d3e5a25530785b30ea67e2
+          command: [/bin/sh, -ec]
+          args:
+            - |
+              echo "Preparing locked Node queue processor dependencies"
+              cp /source/* /app/
+              cd /app
+              npm ci --omit=dev --ignore-scripts --no-audit --no-fund --cache /tmp/npm-cache
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: source
+              mountPath: /source
+              readOnly: true
+            - name: app
+              mountPath: /app
+            - name: temp
+              mountPath: /tmp
+      containers:
+        - name: processor
+          image: node:24.21.0-alpine3.24@sha256:be80f76cf40ec8e42b9bec49f60a55e0660f30af58d3e5a25530785b30ea67e2
+          command: [node, processor.mjs]
+          workingDir: /app
+          envFrom:
+            - configMapRef:
+                name: azure-queue-settings
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: app
+              mountPath: /app
+              readOnly: true
+      volumes:
+        - name: source
+          configMap:
+            name: keda-console-code
+        - name: app
+          emptyDir:
+            sizeLimit: 256Mi
+        - name: temp
+          emptyDir:
+            sizeLimit: 128Mi

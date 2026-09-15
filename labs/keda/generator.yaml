@@ -1,0 +1,45 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: azure-queue-generator
+  namespace: keda-lab
+spec:
+  activeDeadlineSeconds: 180
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        app: azure-queue-generator
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: azure-queue-workload
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      terminationGracePeriodSeconds: 5
+      nodeSelector:
+        kubernetes.io/os: linux
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: generator
+          image: akstraining555a1e03.azurecr.io/az-message-generator:replace-with-built-tag
+          envFrom:
+            - configMapRef:
+                name: azure-queue-settings
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]

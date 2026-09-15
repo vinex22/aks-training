@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qos-best-effort
+  namespace: qos-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qos-best-effort
+  template:
+    metadata:
+      labels:
+        app: qos-best-effort
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: demo
+          image: busybox:1.37.0
+          command: [sleep, "86400"]
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]

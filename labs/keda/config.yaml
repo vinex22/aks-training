@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: azure-queue-settings
+  namespace: keda-lab
+data:
+  STORAGE_ACCOUNT_NAME: stakskeda555a1e03
+  STORAGE_QUEUE_NAME: keda-demo
+  MESSAGE_PROCESSING_SECONDS: "3"
+  MESSAGE_COUNT_PER_MINUTE_MIN: "12"
+  MESSAGE_COUNT_PER_MINUTE_MAX: "36"
